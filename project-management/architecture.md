@@ -1,186 +1,99 @@
-# AI-SIEM Hyperautomation — Architecture
+# HA-AutoM8 — Architecture
 
 *Last updated: 2026-03-23*
 
 ---
 
-## System Overview
+## What This Is
 
-This workspace is a **customized fork** of the HELIOS event-injection platform, extended into a full AI-SIEM Hyperautomation development environment for SentinelOne's Singularity platform. It combines a live data-generation application, an official content library reference, custom automation agents, and project governance tooling.
-
----
-
-## Repository Structure
-
-```
-ai-siem_HA/                          ← project root (aminhamidi-s1/jarvis_coding fork)
-│
-├── jarvis/                          ← HELIOS application (upstream: natesmalley/jarvis_coding)
-│   ├── Backend/                     ← FastAPI backend
-│   │   ├── api/                     ← REST API layer
-│   │   ├── parsers/                 ← SentinelOne parser definitions
-│   │   ├── event_generators/        ← Synthetic log generators (Okta, ZScaler, AWS, etc.)
-│   │   ├── scenarios/               ← Attack scenario playbooks (ransomware, insider, MFA fatigue…)
-│   │   ├── detections.conf          ← Local detection config
-│   │   └── docker-compose.yml       ← Service orchestration
-│   ├── Frontend/                    ← Flask UI
-│   │   ├── log_generator_ui.py      ← Main UI application
-│   │   ├── templates/               ← Jinja2 HTML templates
-│   │   └── static/                  ← CSS / JS assets
-│   ├── docker-compose.yml           ← Root compose (API + Frontend)
-│   └── .env / .env copy             ← Environment config (local only, not committed)
-│
-├── ai-siem/                         ← [SUBMODULE] Sentinel-One/ai-siem (v_1_23_0)
-│   ├── detections/community/        ← 8 approved PowerQuery detection rules
-│   ├── dashboards/community/        ← 85 approved dashboards
-│   ├── workflows/community/         ← 15 approved automation workflows
-│   ├── parsers/community/           ← 150 community parsers
-│   ├── parsers/sentinelone/         ← 19 SentinelOne marketplace parsers
-│   └── pipelines/community/         ← 5 approved data pipelines
-│
-├── reference/                       ← Project governance documents
-│   ├── APPROVED_CONTENT_WHITELIST.md ← Catalog of 282 validated S1 content items
-│   ├── QA_STANDARDS.md              ← Validation standards for generated content
-│   └── PR_GUIDE.md                  ← Pull request procedures
-│
-├── .claude/
-│   └── agents/                      ← Custom subagent definitions (29 agents)
-│       ├── threat-hunter.md
-│       ├── soar-engineer.md
-│       ├── siem-analyst.md
-│       ├── ai-engineer.md
-│       └── ... (25 more)
-│
-├── tasks/
-│   ├── todo.md                      ← Session task tracking
-│   └── lessons.md                   ← Accumulated learnings from corrections
-│
-├── project-management/              ← Project management layer (this folder)
-│   ├── architecture.md              ← This file
-│   └── product-updates.md           ← Session summaries and change log
-│
-├── CLAUDE.md                        ← Project instruction set (AI behavior config)
-├── UPSTREAM.md                      ← Upstream sync guide
-└── .gitmodules                      ← Submodule registry
-```
+A **SentinelOne AI-SIEM Hyperautomation workspace** — a fork of the HELIOS event-injection platform extended with a content library reference, custom AI agents, and project governance for building and validating detection rules, automation playbooks, and SIEM use cases targeting SentinelOne Singularity.
 
 ---
 
-## Component Breakdown
+## High-Level Picture
 
-### 1. HELIOS Application (`jarvis/`)
+```
+┌─────────────────────────────────────────────────────┐
+│              HA-AutoM8 Workspace                    │
+│                                                     │
+│  ┌─────────────┐    ┌──────────────────────────┐   │
+│  │  HELIOS App │    │  AI-SIEM Content Library │   │
+│  │  (jarvis/)  │    │  (ai-siem/ submodule)    │   │
+│  │             │    │                          │   │
+│  │  Generate & │    │  282 validated S1 items  │   │
+│  │  inject     │    │  ← QA baseline           │   │
+│  │  test events│    └──────────────────────────┘   │
+│  └──────┬──────┘              │                    │
+│         │                     │ validate against   │
+│         ▼                     ▼                    │
+│  ┌──────────────────────────────────────────────┐  │
+│  │         Content Development Layer            │  │
+│  │  detections · playbooks · queries · parsers  │  │
+│  │  (built here, validated, then PR'd upstream) │  │
+│  └──────────────────────────────────────────────┘  │
+│                        │                           │
+│         ┌──────────────┴─────────────┐             │
+│         ▼                            ▼             │
+│  .claude/agents/              reference/           │
+│  29 AI subagents              QA standards         │
+│  (build & validate)           PR guide             │
+└─────────────────────────────────────────────────────┘
+```
 
-The core data-generation and injection platform, maintained upstream. Runs as two Docker services:
+**Flow:** Agents build content → HELIOS injects test events into SentinelOne → validate against `ai-siem/` baseline → merge to `origin` → PR upstream.
 
-| Service | Port | Description |
+---
+
+## Components
+
+### HELIOS App (`jarvis/`)
+Fork of `natesmalley/jarvis_coding`. Runs two Docker services:
+
+| Service | Port | Role |
 |---|---|---|
-| Backend API | `localhost:8000` | FastAPI service — manages destinations, parsers, scenario execution |
-| Frontend UI | `localhost:9002` | Flask UI — trigger scenarios, upload logs, configure HEC destinations |
-| API Docs | `localhost:8000/api/v1/docs` | Swagger / OpenAPI spec |
+| Backend API | `8000` | FastAPI — destinations, parsers, scenario execution |
+| Frontend UI | `9002` | Flask — trigger scenarios, upload logs, configure HEC |
 
-**Key capabilities:**
-- Sends synthetic security events to SentinelOne HEC endpoints
-- Supports 150+ parser sourcetypes (Okta, ZScaler, AWS, M365, Vectra, Darktrace, Wiz, Proofpoint…)
-- Executes named attack scenarios (ransomware, insider threat, MFA fatigue, impossible travel, Apollo, AsyncRAT…)
-- Parser sync with SentinelOne Config API
-- Batch HEC support with configurable flush intervals
-- UAM Alert Ingest API support
+Key capabilities: 150+ parser sourcetypes, named attack scenarios (ransomware, insider threat, MFA fatigue, impossible travel, Apollo, AsyncRAT), HEC batch delivery, UAM Alert Ingest, parser sync with S1 Config API.
 
-### 2. AI-SIEM Content Library (`ai-siem/` submodule)
+### AI-SIEM Content Library (`ai-siem/`)
+Git submodule → `Sentinel-One/ai-siem` pinned at `v_1_23_0`. Read-only reference.
 
-Official SentinelOne community content, pinned as a git submodule at `v_1_23_0`. Used as the **QA baseline** for all content generated by this project.
-
-```
-282 total approved items:
-  ├── 8   detections   (PowerQuery, MITRE-mapped)
-  ├── 85  dashboards
-  ├── 15  workflows
-  ├── 169 parsers      (150 community + 19 S1 marketplace)
-  └── 5   pipelines
-```
-
-Nothing generated in this project is submitted upstream without passing validation against these patterns.
-
-### 3. Custom Agent Layer (`.claude/agents/`)
-
-29 specialized AI subagents scoped to security and platform work:
-
-| Category | Agents |
+| Type | Count |
 |---|---|
-| Security / Detection | `threat-hunter`, `siem-analyst`, `soar-engineer` |
+| Detections (PowerQuery) | 8 |
+| Dashboards | 85 |
+| Workflows | 15 |
+| Parsers (community + S1) | 169 |
+| Pipelines | 5 |
+| **Total** | **282** |
+
+### AI Agents (`.claude/agents/`)
+29 specialized subagents:
+
+| Group | Agents |
+|---|---|
+| Security | `threat-hunter`, `siem-analyst`, `soar-engineer` |
+| Platform | `backend`, `frontend`, `devops`, `qa`, `fullstack` |
 | AI/ML | `ai-engineer` |
-| Platform | `backend`, `frontend`, `fullstack`, `devops`, `qa` |
-| Governance | `security`, `compliance`, `technical-writer`, `architect` |
-| GSD Workflow | `gsd-planner`, `gsd-executor`, `gsd-verifier`, `gsd-debugger`, + 12 more |
+| Governance | `security`, `compliance`, `architect`, `technical-writer` |
+| GSD workflow | 15 GSD orchestration agents |
 
-### 4. Reference / Governance (`reference/`)
-
-| File | Purpose |
-|---|---|
-| `APPROVED_CONTENT_WHITELIST.md` | Catalog of all 282 validated S1 content items with field/structure standards |
-| `QA_STANDARDS.md` | Rules for validating generated detections, parsers, dashboards |
-| `PR_GUIDE.md` | Procedures for contributing content back to upstream repos |
+### Reference / Governance (`reference/`)
+- `APPROVED_CONTENT_WHITELIST.md` — 282 approved S1 items with field/structure standards
+- `QA_STANDARDS.md` — validation rules for generated content
+- `PR_GUIDE.md` — procedures for contributing content upstream
 
 ---
 
-## Remote Architecture
+## Remotes
 
-```
-GitHub
-│
-├── aminhamidi-s1/jarvis_coding          ← origin  (this fork, all custom work)
-│   └── tracks → natesmalley/jarvis_coding (upstream)
-│
-└── Sentinel-One/ai-siem                 ← submodule remote (content library, read-only reference)
-```
-
-**Upstream sync flow:**
-```
-natesmalley/jarvis_coding
-        │  git fetch upstream + git merge upstream/main
-        ▼
-  local main branch  →  git push origin main  →  aminhamidi-s1/jarvis_coding
-```
-
-**Submodule update flow:**
-```
-Sentinel-One/ai-siem publishes new content
-        │  git -C ai-siem pull
-        ▼
-  ai-siem/ pinned commit updated  →  git add ai-siem + git commit  →  push
-```
+| Remote | URL | Role |
+|---|---|---|
+| `origin` | `aminhamidi-s1/HA-AutoM8` | This fork — all custom work |
+| `upstream` | `natesmalley/jarvis_coding` | HELIOS source — pull updates into `jarvis/` |
+| submodule | `Sentinel-One/ai-siem` | Content library — pin and update as needed |
 
 ---
 
-## How Everything Works Together
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Development Workflow                        │
-│                                                                 │
-│  ai-siem/ (submodule)          .claude/agents/                 │
-│  Official S1 content           Specialized AI agents           │
-│  ← QA baseline                ← Execution layer                │
-│         │                              │                        │
-│         ▼                              ▼                        │
-│  reference/                    CLAUDE.md instructions          │
-│  Whitelist + QA standards      Agent roster + rules            │
-│         │                              │                        │
-│         └──────────────┬───────────────┘                        │
-│                        ▼                                        │
-│              Content Generation                                 │
-│         (detections / playbooks / queries)                      │
-│                        │                                        │
-│                        ▼                                        │
-│              jarvis/ HELIOS App                                 │
-│         (validate via live data injection                       │
-│          → SentinelOne HEC → Singularity)                       │
-│                        │                                        │
-│                        ▼                                        │
-│              QA Pass → PR to Sentinel-One/ai-siem               │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-*Update this file whenever a new component, integration, or significant structural change is added.*
+*Update after every session that adds a new component or integration.*

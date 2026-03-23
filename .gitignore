@@ -16,6 +16,9 @@
 # Project management directory — all files tracked
 !project-management/
 !project-management/**
+# GSD planning directory — all files tracked
+!.planning/
+!.planning/**
 
 # Testing Directories and Files
 # =============================
@@ -60,6 +63,7 @@ testing/results/
 .env.*
 !.env.example
 config.json
+!.planning/config.json
 secrets.json
 credentials.json
 *.token
