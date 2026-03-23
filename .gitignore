@@ -1,13 +1,15 @@
 # Markdown Documentation Files
 # =============================
 # IMPORTANT: Keep all documentation local only
-!README.md
-!AGENTS.md
 *.md
-!README.md.example
 *.markdown
 *.mdown
 *.mkd
+# Exceptions — these markdown files ARE tracked
+!README.md
+!AGENTS.md
+!UPSTREAM.md
+!CLAUDE.md
 
 # Testing Directories and Files
 # =============================
