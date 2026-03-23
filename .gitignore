@@ -13,6 +13,9 @@
 # Reference directory — all files tracked
 !reference/
 !reference/**
+# Project management directory — all files tracked
+!project-management/
+!project-management/**
 
 # Testing Directories and Files
 # =============================
