@@ -20,6 +20,10 @@
 !.planning/
 !.planning/**
 
+# Frontend src/lib — exception for Python lib/ ignore
+!autom8/frontend/src/lib/
+!autom8/frontend/src/lib/**
+
 # Testing Directories and Files
 # =============================
 # Keep ALL testing local only - don't push to remote
