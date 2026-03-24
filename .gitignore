@@ -9,16 +9,12 @@
 !README.md
 !AGENTS.md
 !UPSTREAM.md
-!CLAUDE.md
 # Reference directory — all files tracked
 !reference/
 !reference/**
 # Project management directory — all files tracked
 !project-management/
 !project-management/**
-# GSD planning directory — all files tracked
-!.planning/
-!.planning/**
 
 # Frontend src/lib — exception for Python lib/ ignore
 !autom8/frontend/src/lib/
@@ -65,9 +61,10 @@ testing/results/
 *.csr
 .env
 .env.*
+.env\ copy
+*.env\ copy
 !.env.example
 config.json
-!.planning/config.json
 secrets.json
 credentials.json
 *.token
